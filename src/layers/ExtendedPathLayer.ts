@@ -64,23 +64,30 @@ export default class ExtendedPathLayer<DataT = unknown> extends PathLayer<DataT,
 					float spacing = 60.0;
 					float arrowLen = 0.1;
 					float arrowSz = 0.8;
-					float cyclePos = mod(posAlongPath, spacing);
-					float normalizedCycle = cyclePos / spacing;
 
-					// Arrow in middle portion of cycle
-					float arrowStart = 0.5 - arrowLen / 2.0;
-					float arrowEnd = 0.5 + arrowLen / 2.0;
+					// Skip near segment boundaries
+					float margin = spacing * arrowLen * 0.5 + 5.0;
+					if (posAlongPath < margin || posAlongPath > vPathLength - margin) {
+						// Near boundary, skip
+					} else {
+						float cyclePos = mod(posAlongPath, spacing);
+						float normalizedCycle = cyclePos / spacing;
 
-					if (normalizedCycle >= arrowStart && normalizedCycle <= arrowEnd) {
-						// Position within arrow (0 at back, 1 at tip)
-						float arrowPos = (normalizedCycle - arrowStart) / arrowLen;
+						// Arrow in middle portion of cycle
+						float arrowStart = 0.5 - arrowLen / 2.0;
+						float arrowEnd = 0.5 + arrowLen / 2.0;
 
-						// Triangle: width decreases from back to tip
-						float maxLateral = (1.0 - arrowPos) * arrowSz;
-						float lateral = abs(vPathPosition.x);
+						if (normalizedCycle >= arrowStart && normalizedCycle <= arrowEnd) {
+							// Position within arrow (0 at back, 1 at tip)
+							float arrowPos = (normalizedCycle - arrowStart) / arrowLen;
 
-						if (lateral <= maxLateral) {
-							fragColor = vec4(1.0, 1.0, 1.0, fragColor.a);
+							// Triangle: width decreases from back to tip
+							float maxLateral = (1.0 - arrowPos) * arrowSz;
+							float lateral = abs(vPathPosition.x);
+
+							if (lateral <= maxLateral) {
+								fragColor = vec4(1.0, 1.0, 1.0, fragColor.a);
+							}
 						}
 					}
 				`,
