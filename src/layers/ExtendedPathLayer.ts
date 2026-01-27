@@ -42,31 +42,31 @@ export default class ExtendedPathLayer<DataT = unknown> extends PathLayer<DataT,
 			inject: {
 				...shaders.inject,
 				"fs:#main-end": `
-					float posAlongPath = vPathLength - vPathPosition.y;
+					do {
+						float posAlongPath = vPathLength - vPathPosition.y;
 
-					// Skip near segment boundaries
-					float margin = ARROW_SPACING * ARROW_LENGTH * 0.5 + 5.0;
-					if (posAlongPath >= margin && posAlongPath <= vPathLength - margin) {
+						// Skip near segment boundaries
+						float margin = ARROW_SPACING * ARROW_LENGTH * 0.5 + 5.0;
+						if (posAlongPath < margin || posAlongPath > vPathLength - margin) break;
+
 						float cyclePos = mod(posAlongPath, ARROW_SPACING);
 						float normalizedCycle = cyclePos / ARROW_SPACING;
 
 						// Arrow in middle portion of cycle
 						float arrowStart = 0.5 - ARROW_LENGTH / 2.0;
 						float arrowEnd = 0.5 + ARROW_LENGTH / 2.0;
+						if (normalizedCycle < arrowStart || normalizedCycle > arrowEnd) break;
 
-						if (normalizedCycle >= arrowStart && normalizedCycle <= arrowEnd) {
-							// Position within arrow (0 at back, 1 at tip)
-							float arrowPos = (normalizedCycle - arrowStart) / ARROW_LENGTH;
+						// Position within arrow (0 at back, 1 at tip)
+						float arrowPos = (normalizedCycle - arrowStart) / ARROW_LENGTH;
 
-							// Triangle: width decreases from back to tip
-							float maxLateral = (1.0 - arrowPos) * ARROW_SIZE;
-							float lateral = abs(vPathPosition.x);
+						// Triangle: width decreases from back to tip
+						float maxLateral = (1.0 - arrowPos) * ARROW_SIZE;
+						float lateral = abs(vPathPosition.x);
+						if (lateral > maxLateral) break;
 
-							if (lateral <= maxLateral) {
-								fragColor = vec4(ARROW_COLOR_R, ARROW_COLOR_G, ARROW_COLOR_B, fragColor.a);
-							}
-						}
-					}
+						fragColor = vec4(ARROW_COLOR_R, ARROW_COLOR_G, ARROW_COLOR_B, fragColor.a);
+					} while (false);
 				`,
 			},
 		};
