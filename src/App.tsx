@@ -1,18 +1,19 @@
 import type { LayersList, PickingInfo } from "@deck.gl/core";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import { Map as MapLibreMap, useControl } from "@vis.gl/react-maplibre";
-import { useState } from "react";
+import { useEffect } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import ExtendedPathLayer from "./layers/ExtendedPathLayer";
+import { injectTooltipStyles, renderWaypointTooltip, type TooltipData } from "./utils/tooltipRenderer";
 
 interface DeckGLOverlayProps {
 	layers: LayersList;
-	onHover?: (info: PickingInfo) => void;
+	getTooltip?: (info: PickingInfo) => any;
 }
 
-function DeckGLOverlay({ layers, onHover }: DeckGLOverlayProps) {
+function DeckGLOverlay({ layers, getTooltip }: DeckGLOverlayProps) {
 	const overlay = useControl(() => new MapboxOverlay({ interleaved: true }));
-	overlay.setProps({ layers, onHover });
+	overlay.setProps({ layers, getTooltip });
 	return null;
 }
 
@@ -23,7 +24,15 @@ type BartLine = {
 };
 
 export default function App() {
-	const [hoverInfo, setHoverInfo] = useState<PickingInfo | null>(null);
+	// Inject CSS styles for tooltips
+	useEffect(() => {
+		injectTooltipStyles();
+	}, []);
+
+	const getTooltip = (info: PickingInfo) => {
+		if (!info.object) return null;
+		return renderWaypointTooltip(info.object as TooltipData);
+	};
 
 	const layer = new ExtendedPathLayer<BartLine>({
 		id: "PathLayer",
@@ -70,47 +79,13 @@ export default function App() {
 		waypointStrokeWidth: 8, // Border width in meters
 	});
 
-	const handleHover = (info: PickingInfo) => {
-		setHoverInfo(info.object ? info : null);
-	};
-
 	return (
-		<div style={{ position: "relative", width: "100%", height: "100vh" }}>
-			<MapLibreMap
-				initialViewState={{ longitude: -122.3, latitude: 37.89, zoom: 15 }}
-				style={{ width: "100%", height: "100vh" }}
-				mapStyle="./liberty.json"
-			>
-				<DeckGLOverlay layers={[layer]} onHover={handleHover} />
-			</MapLibreMap>
-			{hoverInfo?.object && (
-				<div
-					style={{
-						position: "absolute",
-						left: hoverInfo.x,
-						top: hoverInfo.y,
-						pointerEvents: "none",
-						background: "rgba(0, 0, 0, 0.8)",
-						color: "white",
-						padding: "8px 12px",
-						borderRadius: "4px",
-						fontSize: "14px",
-						zIndex: 1000,
-						transform: "translate(-50%, -100%)",
-						marginTop: "-10px",
-					}}
-				>
-					{hoverInfo.object.type === "waypoint" ? (
-						<div>
-							<strong>{hoverInfo.object.pathData ? (hoverInfo.object.pathData as BartLine).name : "Unknown Path"}</strong>
-							<br />
-							Waypoint {(hoverInfo.object.index ?? 0) + 1}
-						</div>
-					) : (
-						<div>{hoverInfo.object.name ? hoverInfo.object.name : "Path"}</div>
-					)}
-				</div>
-			)}
-		</div>
+		<MapLibreMap
+			initialViewState={{ longitude: -122.3, latitude: 37.89, zoom: 15 }}
+			style={{ width: "100%", height: "100vh" }}
+			mapStyle="./liberty.json"
+		>
+			<DeckGLOverlay layers={[layer]} getTooltip={getTooltip} />
+		</MapLibreMap>
 	);
 }
