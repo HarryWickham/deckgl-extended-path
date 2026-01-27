@@ -42,31 +42,32 @@ export default class ExtendedPathLayer<DataT = unknown> extends PathLayer<DataT,
 			inject: {
 				...shaders.inject,
 				"fs:#main-end": `
-					do {
-						float posAlongPath = vPathLength - vPathPosition.y;
+					// Pre-calculated values (defines are compile-time constants)
+					float halfArrowLen = ARROW_LENGTH * 0.5;
+					float arrowStart = 0.5 - halfArrowLen;
+					float invArrowLen = 1.0 / ARROW_LENGTH;
+					float margin = ARROW_SPACING * halfArrowLen + 5.0;
+					vec3 arrowColor = vec3(ARROW_COLOR_R, ARROW_COLOR_G, ARROW_COLOR_B);
 
-						// Skip near segment boundaries
-						float margin = ARROW_SPACING * ARROW_LENGTH * 0.5 + 5.0;
-						if (posAlongPath < margin || posAlongPath > vPathLength - margin) break;
+					float posAlongPath = vPathLength - vPathPosition.y;
 
-						float cyclePos = mod(posAlongPath, ARROW_SPACING);
-						float normalizedCycle = cyclePos / ARROW_SPACING;
+					// Use fract() instead of mod()/div for 0..1 cycle position
+					float nCycle = fract(posAlongPath / ARROW_SPACING);
 
-						// Arrow in middle portion of cycle
-						float arrowStart = 0.5 - ARROW_LENGTH / 2.0;
-						float arrowEnd = 0.5 + ARROW_LENGTH / 2.0;
-						if (normalizedCycle < arrowStart || normalizedCycle > arrowEnd) break;
+					// Arrow progress: 0.0 at base, 1.0 at tip
+					float arrowPos = (nCycle - arrowStart) * invArrowLen;
 
-						// Position within arrow (0 at back, 1 at tip)
-						float arrowPos = (normalizedCycle - arrowStart) / ARROW_LENGTH;
+					// Branchless masks using step()
+					float inArrowSeg = step(0.0, arrowPos) * step(arrowPos, 1.0);
+					float inMargin = step(margin, posAlongPath) * step(posAlongPath, vPathLength - margin);
+					float maxLateral = (1.0 - arrowPos) * ARROW_SIZE;
+					float inShape = step(abs(vPathPosition.x), maxLateral);
 
-						// Triangle: width decreases from back to tip
-						float maxLateral = (1.0 - arrowPos) * ARROW_SIZE;
-						float lateral = abs(vPathPosition.x);
-						if (lateral > maxLateral) break;
+					// Combine masks (logical AND)
+					float finalMask = inArrowSeg * inMargin * inShape;
 
-						fragColor = vec4(ARROW_COLOR_R, ARROW_COLOR_G, ARROW_COLOR_B, fragColor.a);
-					} while (false);
+					// Apply arrow color where mask is 1.0
+					fragColor.rgb = mix(fragColor.rgb, arrowColor, finalMask);
 				`,
 			},
 		};
