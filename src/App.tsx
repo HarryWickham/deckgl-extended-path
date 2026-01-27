@@ -1,16 +1,18 @@
-import type { LayersList } from "@deck.gl/core";
+import type { LayersList, PickingInfo } from "@deck.gl/core";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import { Map as MapLibreMap, useControl } from "@vis.gl/react-maplibre";
+import { useState } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import ExtendedPathLayer from "./layers/ExtendedPathLayer";
 
 interface DeckGLOverlayProps {
 	layers: LayersList;
+	onHover?: (info: PickingInfo) => void;
 }
 
-function DeckGLOverlay({ layers }: DeckGLOverlayProps) {
+function DeckGLOverlay({ layers, onHover }: DeckGLOverlayProps) {
 	const overlay = useControl(() => new MapboxOverlay({ interleaved: true }));
-	overlay.setProps({ layers });
+	overlay.setProps({ layers, onHover });
 	return null;
 }
 
@@ -21,6 +23,8 @@ type BartLine = {
 };
 
 export default function App() {
+	const [hoverInfo, setHoverInfo] = useState<PickingInfo | null>(null);
+
 	const layer = new ExtendedPathLayer<BartLine>({
 		id: "PathLayer",
 		data: [
@@ -54,18 +58,59 @@ export default function App() {
 		arrowSize: 0.9, // Chevrons extend to 90% of total width
 		arrowLength: 0.08, // Stubby chevrons
 		arrowSpacing: 40, // Distance between chevrons
-		arrowColor: [255, 0, 0, 255], // Green for visibility
+		arrowColor: [255, 0, 0, 255], // Red for visibility
 		arrowThickness: 0.35, // Thickness of chevron lines (thicker)
-		lineWidthRatio: 0.25, // Visible line is 40% of total width
+		lineWidthRatio: 0.25, // Visible line is 25% of total width
+
+		// Waypoint configuration
+		showWaypoints: true,
+		waypointRadius: 30, // Size in meters (will scale with zoom)
+		waypointColor: [255, 255, 255, 200], // White with some transparency
+		waypointStrokeColor: [255, 0, 0, 255], // Red border to match line color
+		waypointStrokeWidth: 8, // Border width in meters
 	});
 
+	const handleHover = (info: PickingInfo) => {
+		setHoverInfo(info.object ? info : null);
+	};
+
 	return (
-		<MapLibreMap
-			initialViewState={{ longitude: -122.3, latitude: 37.89, zoom: 15 }}
-			style={{ width: "100%", height: "100vh" }}
-			mapStyle="./liberty.json"
-		>
-			<DeckGLOverlay layers={[layer]} />
-		</MapLibreMap>
+		<div style={{ position: "relative", width: "100%", height: "100vh" }}>
+			<MapLibreMap
+				initialViewState={{ longitude: -122.3, latitude: 37.89, zoom: 15 }}
+				style={{ width: "100%", height: "100vh" }}
+				mapStyle="./liberty.json"
+			>
+				<DeckGLOverlay layers={[layer]} onHover={handleHover} />
+			</MapLibreMap>
+			{hoverInfo && hoverInfo.object && (
+				<div
+					style={{
+						position: "absolute",
+						left: hoverInfo.x,
+						top: hoverInfo.y,
+						pointerEvents: "none",
+						background: "rgba(0, 0, 0, 0.8)",
+						color: "white",
+						padding: "8px 12px",
+						borderRadius: "4px",
+						fontSize: "14px",
+						zIndex: 1000,
+						transform: "translate(-50%, -100%)",
+						marginTop: "-10px",
+					}}
+				>
+					{hoverInfo.object.type === "waypoint" ? (
+						<div>
+							<strong>{hoverInfo.object.pathData ? (hoverInfo.object.pathData as BartLine).name : "Unknown Path"}</strong>
+							<br />
+							Waypoint {(hoverInfo.object.index ?? 0) + 1}
+						</div>
+					) : (
+						<div>{hoverInfo.object.name ? hoverInfo.object.name : "Path"}</div>
+					)}
+				</div>
+			)}
+		</div>
 	);
 }
