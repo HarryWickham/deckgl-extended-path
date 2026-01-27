@@ -26,7 +26,7 @@ export default function App() {
 		data: [
 			{
 				name: "Richmond - Millbrae",
-				color: "#ed1c24",
+				color: "#ff0000",
 				path: [
 					[-122.3535851, 37.9360513],
 					[-122.3179784, 37.9249513],
@@ -47,15 +47,16 @@ export default function App() {
 			return [rgb[0], rgb[1], rgb[2], 255];
 		},
 		getPath: (d: BartLine) => d.path,
-		getWidth: 100, // Total width including arrow overflow area
+		getWidth: 120, // Total width (line + arrow overflow)
 		pickable: true,
 
-		// Arrow configuration
-		arrowSize: 1.0, // Width of arrow (0-1, fraction of total path width)
-		arrowLength: 0.075, // Length of arrow (fraction of spacing)
-		arrowSpacing: 60, // Distance between arrows (in path units)
-		arrowColor: [255, 255, 255, 255], // RGBA color
-		lineWidthRatio: 0.5, // Visible line is 50% of total width (arrows extend beyond)
+		// Arrow configuration (hollow chevron ">", poking outside line)
+		arrowSize: 0.9, // Chevrons extend to 90% of total width
+		arrowLength: 0.08, // Stubby chevrons
+		arrowSpacing: 40, // Distance between chevrons
+		arrowColor: [255, 0, 0, 255], // Green for visibility
+		arrowThickness: 0.35, // Thickness of chevron lines (thicker)
+		lineWidthRatio: 0.25, // Visible line is 40% of total width
 	});
 
 	return (

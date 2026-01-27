@@ -7,15 +7,17 @@ export type ExtendedPathLayerProps<DataT = unknown> = PathLayerProps<DataT> & {
 	arrowLength?: number;
 	arrowSpacing?: number;
 	arrowColor?: [number, number, number, number];
-	lineWidthRatio?: number; // Ratio of visible line to total path width (0-1)
+	arrowThickness?: number; // Thickness of hollow chevron lines
+	lineWidthRatio?: number; // Visible line as fraction of total width (arrows extend beyond)
 };
 
 const defaultProps: DefaultProps<ExtendedPathLayerProps> = {
-	arrowSize: { type: "number", value: 0.8 },
-	arrowLength: { type: "number", value: 0.075 },
-	arrowSpacing: { type: "number", value: 60 },
-	arrowColor: { type: "color", value: [255, 255, 255, 255] },
-	lineWidthRatio: { type: "number", value: 0.5 }, // Line is 50% of total width, arrows can extend into the other 50%
+	arrowSize: { type: "number", value: 0.9 },
+	arrowLength: { type: "number", value: 0.08 },
+	arrowSpacing: { type: "number", value: 40 },
+	arrowColor: { type: "color", value: [0, 255, 0, 255] },
+	arrowThickness: { type: "number", value: 0.12 },
+	lineWidthRatio: { type: "number", value: 0.4 },
 };
 
 export default class ExtendedPathLayer<DataT = unknown> extends PathLayer<DataT, ExtendedPathLayerProps<DataT>> {
@@ -25,15 +27,15 @@ export default class ExtendedPathLayer<DataT = unknown> extends PathLayer<DataT,
 	getShaders() {
 		const shaders = super.getShaders();
 		const {
-			arrowSize = 0.8,
-			arrowLength = 0.075,
-			arrowSpacing = 60,
-			arrowColor = [255, 255, 255, 255],
-			lineWidthRatio = 0.5,
+			arrowSize = 0.9,
+			arrowLength = 0.08,
+			arrowSpacing = 40,
+			arrowColor = [0, 255, 0, 255],
+			arrowThickness = 0.12,
+			lineWidthRatio = 0.4,
 		} = this.props;
 
-		// Convert color to normalized values for shader
-		const [r, g, b, a] = arrowColor;
+		const [r, g, b] = arrowColor;
 
 		return {
 			...shaders,
@@ -45,7 +47,7 @@ export default class ExtendedPathLayer<DataT = unknown> extends PathLayer<DataT,
 				ARROW_COLOR_R: (r / 255).toFixed(4),
 				ARROW_COLOR_G: (g / 255).toFixed(4),
 				ARROW_COLOR_B: (b / 255).toFixed(4),
-				ARROW_COLOR_A: (a / 255).toFixed(4),
+				ARROW_THICKNESS: arrowThickness.toFixed(4),
 				LINE_WIDTH_RATIO: lineWidthRatio.toFixed(4),
 			},
 			inject: {
@@ -62,27 +64,35 @@ export default class ExtendedPathLayer<DataT = unknown> extends PathLayer<DataT,
 					float lateral = abs(vPathPosition.x);
 					float posAlongPath = vPathLength - vPathPosition.y;
 
-					// Check if we're in the visible line area (center portion)
+					// Check if in visible line area (center portion)
 					float inLineArea = step(lateral, LINE_WIDTH_RATIO);
 
 					// Cycle position for arrows
 					float nCycle = fract(posAlongPath * invArrowSpacing);
 					float arrowPos = (nCycle - arrowStart) * invArrowLen;
 
-					// Arrow masks
+					// Arrow segment and margin checks
 					float inArrowSeg = step(abs(arrowPos - 0.5), 0.5);
 					float inMargin = step(margin, posAlongPath) * step(posAlongPath, vPathLength - margin);
 
-					// Arrow shape - scale lateral position relative to full width for arrows
-					float maxLateral = (1.0 - arrowPos) * ARROW_SIZE;
-					float inArrowShape = step(lateral, maxLateral);
+					// Hollow chevron with mitre join at tip
+					// Outer triangle: lateral <= (1 - arrowPos) * ARROW_SIZE
+					// Inner triangle: lateral <= (1 - arrowPos) * (ARROW_SIZE - ARROW_THICKNESS)
+					// Chevron = inside outer AND outside inner
 
-					float isArrow = inArrowSeg * inMargin * inArrowShape;
+					float outerMaxLateral = (1.0 - arrowPos) * ARROW_SIZE;
+					float innerMaxLateral = (1.0 - arrowPos) * max(ARROW_SIZE - ARROW_THICKNESS * 2.0, 0.0);
 
-					// Final color: show line color in center, arrow color for arrows, transparent elsewhere
+					float inOuter = step(lateral, outerMaxLateral);
+					float inInner = step(lateral, innerMaxLateral);
+
+					// Hollow: inside outer but outside inner
+					float onChevron = inOuter * (1.0 - inInner);
+
+					float isArrow = inArrowSeg * inMargin * onChevron;
+
+					// Show pixel if in line area OR on arrow
 					float showPixel = max(inLineArea, isArrow);
-
-					// If outside both line and arrow, make transparent
 					fragColor.a *= showPixel;
 
 					// Apply arrow color where we have arrows
