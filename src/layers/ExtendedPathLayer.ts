@@ -7,6 +7,7 @@ export type ExtendedPathLayerProps<DataT = unknown> = PathLayerProps<DataT> & {
 	arrowLength?: number;
 	arrowSpacing?: number;
 	arrowColor?: [number, number, number, number];
+	lineWidthRatio?: number; // Ratio of visible line to total path width (0-1)
 };
 
 const defaultProps: DefaultProps<ExtendedPathLayerProps> = {
@@ -14,6 +15,7 @@ const defaultProps: DefaultProps<ExtendedPathLayerProps> = {
 	arrowLength: { type: "number", value: 0.075 },
 	arrowSpacing: { type: "number", value: 60 },
 	arrowColor: { type: "color", value: [255, 255, 255, 255] },
+	lineWidthRatio: { type: "number", value: 0.5 }, // Line is 50% of total width, arrows can extend into the other 50%
 };
 
 export default class ExtendedPathLayer<DataT = unknown> extends PathLayer<DataT, ExtendedPathLayerProps<DataT>> {
@@ -22,7 +24,13 @@ export default class ExtendedPathLayer<DataT = unknown> extends PathLayer<DataT,
 
 	getShaders() {
 		const shaders = super.getShaders();
-		const { arrowSize = 0.8, arrowLength = 0.075, arrowSpacing = 60, arrowColor = [255, 255, 255, 255] } = this.props;
+		const {
+			arrowSize = 0.8,
+			arrowLength = 0.075,
+			arrowSpacing = 60,
+			arrowColor = [255, 255, 255, 255],
+			lineWidthRatio = 0.5,
+		} = this.props;
 
 		// Convert color to normalized values for shader
 		const [r, g, b, a] = arrowColor;
@@ -38,6 +46,7 @@ export default class ExtendedPathLayer<DataT = unknown> extends PathLayer<DataT,
 				ARROW_COLOR_G: (g / 255).toFixed(4),
 				ARROW_COLOR_B: (b / 255).toFixed(4),
 				ARROW_COLOR_A: (a / 255).toFixed(4),
+				LINE_WIDTH_RATIO: lineWidthRatio.toFixed(4),
 			},
 			inject: {
 				...shaders.inject,
@@ -46,29 +55,38 @@ export default class ExtendedPathLayer<DataT = unknown> extends PathLayer<DataT,
 					float halfArrowLen = ARROW_LENGTH * 0.5;
 					float arrowStart = 0.5 - halfArrowLen;
 					float invArrowLen = 1.0 / ARROW_LENGTH;
-					float invArrowSpacing = 1.0 / ARROW_SPACING; // Pre-calc inverse
+					float invArrowSpacing = 1.0 / ARROW_SPACING;
 					float margin = ARROW_SPACING * halfArrowLen + 5.0;
-					vec3 arrowColor = vec3(ARROW_COLOR_R, ARROW_COLOR_G, ARROW_COLOR_B);
+					vec3 arrowColorVec = vec3(ARROW_COLOR_R, ARROW_COLOR_G, ARROW_COLOR_B);
 
+					float lateral = abs(vPathPosition.x);
 					float posAlongPath = vPathLength - vPathPosition.y;
 
-					// optimization: multiply by inverse
-					float nCycle = fract(posAlongPath * invArrowSpacing);
+					// Check if we're in the visible line area (center portion)
+					float inLineArea = step(lateral, LINE_WIDTH_RATIO);
 
+					// Cycle position for arrows
+					float nCycle = fract(posAlongPath * invArrowSpacing);
 					float arrowPos = (nCycle - arrowStart) * invArrowLen;
 
-					// optimization: single step using abs()
+					// Arrow masks
 					float inArrowSeg = step(abs(arrowPos - 0.5), 0.5);
-					
-					// Margin check
 					float inMargin = step(margin, posAlongPath) * step(posAlongPath, vPathLength - margin);
-					
+
+					// Arrow shape - scale lateral position relative to full width for arrows
 					float maxLateral = (1.0 - arrowPos) * ARROW_SIZE;
-					float inShape = step(abs(vPathPosition.x), maxLateral);
+					float inArrowShape = step(lateral, maxLateral);
 
-					float finalMask = inArrowSeg * inMargin * inShape;
+					float isArrow = inArrowSeg * inMargin * inArrowShape;
 
-					fragColor.rgb = mix(fragColor.rgb, arrowColor, finalMask);
+					// Final color: show line color in center, arrow color for arrows, transparent elsewhere
+					float showPixel = max(inLineArea, isArrow);
+
+					// If outside both line and arrow, make transparent
+					fragColor.a *= showPixel;
+
+					// Apply arrow color where we have arrows
+					fragColor.rgb = mix(fragColor.rgb, arrowColorVec, isArrow);
 				`,
 			},
 		};

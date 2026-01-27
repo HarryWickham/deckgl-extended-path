@@ -47,14 +47,15 @@ export default function App() {
 			return [rgb[0], rgb[1], rgb[2], 255];
 		},
 		getPath: (d: BartLine) => d.path,
-		getWidth: 50,
+		getWidth: 100, // Total width including arrow overflow area
 		pickable: true,
 
 		// Arrow configuration
-		arrowSize: 0.8, // Width of arrow (0-1, fraction of path width)
+		arrowSize: 1.0, // Width of arrow (0-1, fraction of total path width)
 		arrowLength: 0.075, // Length of arrow (fraction of spacing)
 		arrowSpacing: 60, // Distance between arrows (in path units)
 		arrowColor: [255, 255, 255, 255], // RGBA color
+		lineWidthRatio: 0.5, // Visible line is 50% of total width (arrows extend beyond)
 	});
 
 	return (
