@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(bun add:*)",
+      "Bash(bun pm:*)",
+      "Bash(bun remove:*)"
+    ]
+  }
+}
