@@ -10,9 +10,9 @@ export type ExtendedPathLayerProps<DataT = unknown> = PathLayerProps<DataT> & {
 };
 
 const defaultProps: DefaultProps<ExtendedPathLayerProps> = {
-	arrowSize: { type: "number", value: 1.0 },
-	arrowLength: { type: "number", value: 0.6 },
-	arrowSpacing: { type: "number", value: 80 },
+	arrowSize: { type: "number", value: 0.8 },
+	arrowLength: { type: "number", value: 0.075 },
+	arrowSpacing: { type: "number", value: 60 },
 	arrowColor: { type: "color", value: [255, 255, 255, 255] },
 };
 
@@ -22,90 +22,53 @@ export default class ExtendedPathLayer<DataT = unknown> extends PathLayer<DataT,
 
 	getShaders() {
 		const shaders = super.getShaders();
+		const { arrowSize = 0.8, arrowLength = 0.075, arrowSpacing = 60, arrowColor = [255, 255, 255, 255] } = this.props;
+
+		// Convert color to normalized values for shader
+		const [r, g, b, a] = arrowColor;
 
 		return {
 			...shaders,
+			defines: {
+				...shaders.defines,
+				ARROW_SIZE: arrowSize.toFixed(4),
+				ARROW_LENGTH: arrowLength.toFixed(4),
+				ARROW_SPACING: arrowSpacing.toFixed(4),
+				ARROW_COLOR_R: (r / 255).toFixed(4),
+				ARROW_COLOR_G: (g / 255).toFixed(4),
+				ARROW_COLOR_B: (b / 255).toFixed(4),
+				ARROW_COLOR_A: (a / 255).toFixed(4),
+			},
 			inject: {
 				...shaders.inject,
-				"fs:#decl": `
-					uniform float arrowSize;
-					uniform float arrowLength;
-					uniform float arrowSpacing;
-					uniform vec4 arrowColor;
-
-					float drawArrow(float posAlongPath, float lateral) {
-						// posAlongPath: position along path (0 to vPathLength)
-						// lateral: -1 to 1 across the path width
-
-						// Find position within arrow spacing cycle
-						float cyclePos = mod(posAlongPath, arrowSpacing);
-						float normalizedCycle = cyclePos / arrowSpacing;
-
-						// Arrow occupies a portion of the cycle
-						float arrowStart = 0.5 - arrowLength / 2.0;
-						float arrowEnd = 0.5 + arrowLength / 2.0;
-
-						if (normalizedCycle >= arrowStart && normalizedCycle <= arrowEnd) {
-							// Position within arrow (0 at back, 1 at tip)
-							float arrowPos = (normalizedCycle - arrowStart) / arrowLength;
-
-							// Arrow shape: triangle pointing forward
-							float maxLateral = (1.0 - arrowPos) * arrowSize;
-
-							if (abs(lateral) <= maxLateral) {
-								return 1.0;
-							}
-						}
-						return 0.0;
-					}
-				`,
 				"fs:#main-end": `
 					float posAlongPath = vPathLength - vPathPosition.y;
-					float spacing = 60.0;
-					float arrowLen = 0.1;
-					float arrowSz = 0.8;
 
 					// Skip near segment boundaries
-					float margin = spacing * arrowLen * 0.5 + 5.0;
-					if (posAlongPath < margin || posAlongPath > vPathLength - margin) {
-						// Near boundary, skip
-					} else {
-						float cyclePos = mod(posAlongPath, spacing);
-						float normalizedCycle = cyclePos / spacing;
+					float margin = ARROW_SPACING * ARROW_LENGTH * 0.5 + 5.0;
+					if (posAlongPath >= margin && posAlongPath <= vPathLength - margin) {
+						float cyclePos = mod(posAlongPath, ARROW_SPACING);
+						float normalizedCycle = cyclePos / ARROW_SPACING;
 
 						// Arrow in middle portion of cycle
-						float arrowStart = 0.5 - arrowLen / 2.0;
-						float arrowEnd = 0.5 + arrowLen / 2.0;
+						float arrowStart = 0.5 - ARROW_LENGTH / 2.0;
+						float arrowEnd = 0.5 + ARROW_LENGTH / 2.0;
 
 						if (normalizedCycle >= arrowStart && normalizedCycle <= arrowEnd) {
 							// Position within arrow (0 at back, 1 at tip)
-							float arrowPos = (normalizedCycle - arrowStart) / arrowLen;
+							float arrowPos = (normalizedCycle - arrowStart) / ARROW_LENGTH;
 
 							// Triangle: width decreases from back to tip
-							float maxLateral = (1.0 - arrowPos) * arrowSz;
+							float maxLateral = (1.0 - arrowPos) * ARROW_SIZE;
 							float lateral = abs(vPathPosition.x);
 
 							if (lateral <= maxLateral) {
-								fragColor = vec4(1.0, 1.0, 1.0, fragColor.a);
+								fragColor = vec4(ARROW_COLOR_R, ARROW_COLOR_G, ARROW_COLOR_B, fragColor.a);
 							}
 						}
 					}
 				`,
 			},
 		};
-	}
-
-	draw(params: any) {
-		const { arrowSize, arrowLength, arrowSpacing, arrowColor } = this.props;
-
-		params.uniforms = {
-			...params.uniforms,
-			arrowSize,
-			arrowLength,
-			arrowSpacing,
-			arrowColor,
-		};
-
-		super.draw(params);
 	}
 }

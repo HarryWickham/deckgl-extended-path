@@ -40,7 +40,6 @@ export default function App() {
 				],
 			},
 		],
-		arrowColor: [255, 255, 255, 255],
 		getColor: (d: BartLine): [number, number, number, number] => {
 			const hex = d.color;
 			// convert to RGB
@@ -50,6 +49,12 @@ export default function App() {
 		getPath: (d: BartLine) => d.path,
 		getWidth: 50,
 		pickable: true,
+
+		// Arrow configuration
+		arrowSize: 0.8, // Width of arrow (0-1, fraction of path width)
+		arrowLength: 0.075, // Length of arrow (fraction of spacing)
+		arrowSpacing: 60, // Distance between arrows (in path units)
+		arrowColor: [255, 255, 255, 255], // RGBA color
 	});
 
 	return (
