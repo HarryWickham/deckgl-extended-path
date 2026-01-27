@@ -83,7 +83,7 @@ export default function App() {
 			>
 				<DeckGLOverlay layers={[layer]} onHover={handleHover} />
 			</MapLibreMap>
-			{hoverInfo && hoverInfo.object && (
+			{hoverInfo?.object && (
 				<div
 					style={{
 						position: "absolute",

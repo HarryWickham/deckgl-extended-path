@@ -88,14 +88,11 @@ class ArrowPathLayer<DataT = unknown> extends PathLayer<DataT> {
 					float inArrowSeg = step(abs(arrowPos - 0.5), 0.5);
 					float inMargin = step(margin, posAlongPath) * step(posAlongPath, vPathLength - margin);
 
+					// Full triangle - just use outer boundary, no inner cutout
 					float outerMaxLateral = (1.0 - arrowPos) * ARROW_SIZE;
-					float innerMaxLateral = (1.0 - arrowPos) * max(ARROW_SIZE - ARROW_THICKNESS * 2.0, 0.0);
-
-					float inOuter = step(lateral, outerMaxLateral);
-					float inInner = step(lateral, innerMaxLateral);
-
-					float onChevron = inOuter * (1.0 - inInner);
-					float isArrow = inArrowSeg * inMargin * onChevron;
+					float inTriangle = step(lateral, outerMaxLateral);
+					
+					float isArrow = inArrowSeg * inMargin * inTriangle;
 
 					float showPixel = max(inLineArea, isArrow);
 					fragColor.a *= showPixel;
@@ -138,18 +135,8 @@ export default class ExtendedPathLayer<DataT = unknown> extends CompositeLayer<E
 	}
 
 	renderLayers() {
-		const {
-			data,
-			getPath,
-			getColor,
-			getWidth,
-			pickable,
-			showWaypoints,
-			waypointRadius,
-			waypointColor,
-			waypointStrokeColor,
-			waypointStrokeWidth,
-		} = this.props;
+		const { data, getPath, getColor, getWidth, showWaypoints, waypointRadius, waypointColor, waypointStrokeColor, waypointStrokeWidth } =
+			this.props;
 
 		// Extract waypoints from all paths
 		const waypoints: WaypointData[] = [];
@@ -167,7 +154,7 @@ export default class ExtendedPathLayer<DataT = unknown> extends CompositeLayer<E
 				getPath,
 				getColor,
 				getWidth,
-				pickable,
+				pickable: false, // Disable hover on the path line
 			}),
 		];
 
