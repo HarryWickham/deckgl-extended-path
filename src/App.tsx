@@ -68,23 +68,23 @@ export default function App() {
         return [rgb[0], rgb[1], rgb[2], 255];
       },
       getPath: (d: BartLine) => d.path,
-      getWidth: 120, // Total width (line + arrow overflow)
+      getWidth: 15, // Total width (line + arrow overflow)
       pickable: true,
 
       // Arrow configuration (hollow chevron ">", poking outside line)
       arrowSize: 0.9, // Chevrons extend to 90% of total width
-      arrowLength: 0.08, // Stubby chevrons
+      arrowLength: 0.04, // Stubby chevrons
       arrowSpacing: 40, // Distance between chevrons
       arrowColor: [255, 0, 0, 255], // Red for visibility
-      arrowThickness: 0.35, // Thickness of chevron lines (thicker)
-      lineWidthRatio: 0.25, // Visible line is 25% of total width
+      arrowThickness: 0.45, // Thickness of chevron lines (thicker)
+      lineWidthRatio: 0.15, // Visible line is 25% of total width
 
       // Waypoint configuration
       showWaypoints: true,
-      waypointRadius: 30, // Size in meters (will scale with zoom)
+      waypointRadius: 8, // Size in meters (will scale with zoom)
       waypointColor: [255, 255, 255, 200], // White with some transparency
       waypointStrokeColor: [255, 0, 0, 255], // Red border to match line color
-      waypointStrokeWidth: 8, // Border width in meters
+      waypointStrokeWidth: 2, // Border width in meters
     }),
     new ExtendedIconLayer({
       id: "IconLayer",
@@ -108,7 +108,11 @@ export default function App() {
 
   return (
     <MapLibreMap
-      initialViewState={{ longitude: 0, latitude: 0, zoom: 15 }}
+      initialViewState={{
+        longitude: -122.2718706,
+        latitude: 37.704996,
+        zoom: 15,
+      }}
       style={{ width: "100%", height: "100vh" }}
       mapStyle="./liberty.json"
     >
