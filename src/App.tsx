@@ -97,6 +97,12 @@ export default function App() {
       circleColor: [16, 6, 159, 255], // White background
       circleStrokeColor: [0, 0, 0, 255], // Black border
       circleStrokeWidth: 0,
+      iconAtlas: "/rr_engine_stand_000000.webp",
+      iconMapping: {
+        marker: { x: 0, y: 0, width: 48, height: 48, mask: true },
+      },
+      getIcon: () => "marker",
+      getColor: [255, 255, 255, 255],
     }),
   ];
 

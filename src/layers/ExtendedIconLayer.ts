@@ -51,13 +51,7 @@ export default class ExtendedIconLayer<DataT = unknown> extends CompositeLayer<
       circleRadiusUnits,
       iconAtlas,
       iconMapping,
-      sizeScale,
-      sizeUnits,
-      sizeMinPixels,
-      sizeMaxPixels,
-      getAngle,
       getColor,
-      getPixelOffset,
     } = this.props;
 
     return [
@@ -79,21 +73,10 @@ export default class ExtendedIconLayer<DataT = unknown> extends CompositeLayer<
       new IconLayer<DataT>(this.getSubLayerProps({ id: "icon" }), {
         data,
         getPosition,
-        // Use the exact same working configuration as the basic IconLayer
-        iconAtlas: "/rr_engine_stand_000000.webp",
-        iconMapping: {
-          marker: {
-            x: 0,
-            y: 0,
-            width: 48,
-            height: 48,
-            anchorY: 24,
-            anchorX: 24,
-            mask: true,
-          },
-        },
-        getIcon: () => "marker",
-        getColor: [255, 255, 255, 255],
+        iconAtlas,
+        iconMapping,
+        getIcon,
+        getColor,
         getSize,
         pickable: false, // Let circle handle picking
       }),
