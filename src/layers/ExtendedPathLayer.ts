@@ -20,7 +20,7 @@ export type ExtendedPathLayerProps<DataT = unknown> = CompositeLayerProps &
 
 const defaultProps: DefaultProps<ExtendedPathLayerProps<unknown>> = {
 	arrowSize: { type: "number", value: 0.9 },
-	arrowColor: { type: "color", value: [0, 255, 0, 255] },
+	arrowColor: { type: "color", value: [255, 255, 255, 255] },
 	lineWidthRatio: { type: "number", value: 0.4 },
 	// Waypoint defaults
 	showWaypoints: { type: "boolean", value: true },
@@ -39,7 +39,7 @@ class ArrowPathLayer<DataT = unknown> extends PathLayer<DataT> {
 		const parentLayer = this.parent as ExtendedPathLayer<DataT>;
 		const {
 			arrowSize = 0.9,
-			arrowColor = [0, 255, 0, 255],
+			arrowColor = [255, 255, 255, 255],
 			lineWidthRatio = 0.4,
 		} = parentLayer?.props || {};
 
@@ -58,41 +58,30 @@ class ArrowPathLayer<DataT = unknown> extends PathLayer<DataT> {
 			inject: {
 				...shaders.inject,
 				"fs:#main-end": `
-					// --- Constants ---
-					const float arrowHalf  = 2.0;         // Half-length of arrow box
-					const float invLen     = 0.2;         // Scales progress to 0..0.8 (blunt tip)
-					
-					// Strict length check: Segment must be at least 8.0m long to show an arrow
-					// (Arrow is 5.0m, so this adds a 3.0m safety buffer)
-					const float minPathLen = 8.0;         
-					
+					const float arrowHalf  = 2.5;
+					const float invLen     = 0.2;   // 1.0 / (2.0 * arrowHalf)
+					const float minPathLen = 8.0;
+					const float edgeSoft   = 0.03;
 					const vec3  arrowColor = vec3(ARROW_COLOR_R, ARROW_COLOR_G, ARROW_COLOR_B);
 
-					// --- Calculations ---
 					float distFromCenter = (vPathLength - vPathPosition.y) - (vPathLength * 0.5);
 					float lateral = abs(vPathPosition.x);
 
-					// 1. Size Check: Is the path long enough?
 					float hasArrow = step(minPathLen, vPathLength);
-
-					// 2. Box Logic (defines where the arrow sits)
 					float inArrowBox = step(abs(distFromCenter), arrowHalf);
 
-					// 3. Arrow Shape
-					float arrowProgress = (distFromCenter + arrowHalf) * invLen;
-					float inTriangle = step(lateral, (1.0 - arrowProgress) * ARROW_SIZE);
+					// Solid filled triangle with anti-aliased edge
+					float progress = clamp((distFromCenter + arrowHalf) * invLen, 0.0, 1.0);
+					float target = (1.0 - progress) * ARROW_SIZE;
+					float triangle = (1.0 - smoothstep(target - edgeSoft, target + edgeSoft, lateral))
+					               * inArrowBox * hasArrow;
 
-					// 4. Line Visibility
-					// Show line IF: (NOT in Arrow Box OR path is too small for arrow)
-					// The line now cuts off exactly at the arrow edge (no gap)
-					float showLine = step(lateral, LINE_WIDTH_RATIO) * (1.0 - (inArrowBox * hasArrow));
+					// Line hidden in arrow box
+					float line = (1.0 - smoothstep(LINE_WIDTH_RATIO - edgeSoft, LINE_WIDTH_RATIO + edgeSoft, lateral))
+					           * (1.0 - (inArrowBox * hasArrow));
 
-					// 5. Arrow Visibility
-					float showArrow = inTriangle * inArrowBox * hasArrow;
-
-					// --- Output ---
-					fragColor.a *= max(showLine, showArrow);
-					fragColor.rgb = mix(fragColor.rgb, arrowColor, showArrow);
+					fragColor.a *= max(line, triangle);
+					fragColor.rgb = mix(fragColor.rgb, arrowColor, triangle);
 				`,
 			},
 		};
