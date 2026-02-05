@@ -37,11 +37,7 @@ class ArrowPathLayer<DataT = unknown> extends PathLayer<DataT> {
 	getShaders() {
 		const shaders = super.getShaders();
 		const parentLayer = this.parent as ExtendedPathLayer<DataT>;
-		const {
-			arrowSize = 0.9,
-			arrowColor = [255, 255, 255, 255],
-			lineWidthRatio = 0.4,
-		} = parentLayer?.props || {};
+		const { arrowSize = 0.9, arrowColor = [255, 255, 255, 255], lineWidthRatio = 0.4 } = parentLayer?.props || {};
 
 		const [r, g, b] = arrowColor;
 
@@ -58,8 +54,8 @@ class ArrowPathLayer<DataT = unknown> extends PathLayer<DataT> {
 			inject: {
 				...shaders.inject,
 				"fs:#main-end": `
-					const float arrowHalf  = 2.5;
-					const float invLen     = 0.2;   // 1.0 / (2.0 * arrowHalf)
+					const float arrowHalf  = 1.125;
+					const float invLen     = 0.4;   // 1.0 / (2.0 * arrowHalf)
 					const float minPathLen = 8.0;
 					const float edgeSoft   = 0.03;
 					const vec3  arrowColor = vec3(ARROW_COLOR_R, ARROW_COLOR_G, ARROW_COLOR_B);
