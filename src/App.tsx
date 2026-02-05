@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import ExtendedIconLayer from "./layers/ExtendedIconLayer";
 import ExtendedPathLayer from "./layers/ExtendedPathLayer";
-import { injectTooltipStyles, renderWaypointTooltip, type TooltipData } from "./utils/tooltipRenderer";
+import { injectTooltipStyles, renderWaypointTooltip, type TooltipData, type TooltipReturn } from "./utils/tooltipRenderer";
 
 // --- CONFIGURE ---
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN; // required for Mapbox tiles
@@ -39,7 +39,7 @@ type MapStyleKey = keyof typeof MAP_STYLES;
 
 interface DeckGLOverlayProps {
 	layers: LayersList;
-	getTooltip?: (info: PickingInfo) => any;
+	getTooltip?: (info: PickingInfo) => TooltipReturn;
 }
 
 function DeckGLOverlay({ layers, getTooltip }: DeckGLOverlayProps) {
@@ -97,12 +97,9 @@ export default function App() {
 			getWidth: 15, // Total width (line + arrow overflow)
 			pickable: true,
 
-			// Arrow configuration (hollow chevron ">", poking outside line)
+			// Arrow configuration
 			arrowSize: 0.9, // Chevrons extend to 90% of total width
-			arrowLength: 0.04, // Stubby chevrons
-			arrowSpacing: 40, // Distance between chevrons
 			arrowColor: [255, 0, 0, 255], // Red for visibility
-			arrowThickness: 0.45, // Thickness of chevron lines (thicker)
 			lineWidthRatio: 0.15, // Visible line is 25% of total width
 
 			// Waypoint configuration
@@ -120,7 +117,7 @@ export default function App() {
 			pickable: true,
 			// Circle background properties
 			circleRadius: 35,
-			circleColor: [16, 6, 159, 255], // White background
+			circleColor: [16, 6, 159, 255], // Dark blue background
 			circleStrokeColor: [0, 0, 0, 255], // Black border
 			circleStrokeWidth: 0,
 			iconAtlas: "/rr_engine_stand_000000.webp",

@@ -1,7 +1,7 @@
 import type React from "react";
 import { renderToString } from "react-dom/server";
 
-type TooltipReturn =
+export type TooltipReturn =
 	| null
 	| string
 	| {

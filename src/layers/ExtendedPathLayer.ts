@@ -7,10 +7,7 @@ import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 export type ExtendedPathLayerProps<DataT = unknown> = CompositeLayerProps &
 	PathLayerProps<DataT> & {
 		arrowSize?: number;
-		arrowLength?: number;
-		arrowSpacing?: number;
 		arrowColor?: [number, number, number, number];
-		arrowThickness?: number;
 		lineWidthRatio?: number;
 		// Waypoint props
 		showWaypoints?: boolean;
@@ -23,17 +20,14 @@ export type ExtendedPathLayerProps<DataT = unknown> = CompositeLayerProps &
 
 const defaultProps: DefaultProps<ExtendedPathLayerProps<unknown>> = {
 	arrowSize: { type: "number", value: 0.9 },
-	arrowLength: { type: "number", value: 0.08 },
-	arrowSpacing: { type: "number", value: 40 },
 	arrowColor: { type: "color", value: [0, 255, 0, 255] },
-	arrowThickness: { type: "number", value: 0.12 },
 	lineWidthRatio: { type: "number", value: 0.4 },
-	// Waypoint defaults (updated for meter units)
+	// Waypoint defaults
 	showWaypoints: { type: "boolean", value: true },
-	waypointRadius: { type: "number", value: 25 }, // Meters instead of pixels
+	waypointRadius: { type: "number", value: 25 },
 	waypointColor: { type: "color", value: [255, 255, 255, 200] },
 	waypointStrokeColor: { type: "color", value: [0, 0, 0, 255] },
-	waypointStrokeWidth: { type: "number", value: 5 }, // Meters instead of pixels
+	waypointStrokeWidth: { type: "number", value: 5 },
 };
 
 // Internal PathLayer with arrow shaders
@@ -45,10 +39,7 @@ class ArrowPathLayer<DataT = unknown> extends PathLayer<DataT> {
 		const parentLayer = this.parent as ExtendedPathLayer<DataT>;
 		const {
 			arrowSize = 0.9,
-			arrowLength = 0.08,
-			arrowSpacing = 40,
 			arrowColor = [0, 255, 0, 255],
-			arrowThickness = 0.12,
 			lineWidthRatio = 0.4,
 		} = parentLayer?.props || {};
 
@@ -59,21 +50,17 @@ class ArrowPathLayer<DataT = unknown> extends PathLayer<DataT> {
 			defines: {
 				...shaders.defines,
 				ARROW_SIZE: arrowSize.toFixed(4),
-				ARROW_LENGTH: arrowLength.toFixed(4),
-				ARROW_SPACING: arrowSpacing.toFixed(4),
 				ARROW_COLOR_R: (r / 255).toFixed(4),
 				ARROW_COLOR_G: (g / 255).toFixed(4),
 				ARROW_COLOR_B: (b / 255).toFixed(4),
-				ARROW_THICKNESS: arrowThickness.toFixed(4),
 				LINE_WIDTH_RATIO: lineWidthRatio.toFixed(4),
 			},
 			inject: {
 				...shaders.inject,
 				"fs:#main-end": `
 					// --- Constants ---
-					const float arrowHalf  = 2.0;         // Half-length of arrow
-					const float arrowLen   = 4.0;         // Full length (2.5 * 2.0)
-					const float invLen     = 0.2;         // 1.0 / 5.0
+					const float arrowHalf  = 2.0;         // Half-length of arrow box
+					const float invLen     = 0.2;         // Scales progress to 0..0.8 (blunt tip)
 					
 					// Strict length check: Segment must be at least 8.0m long to show an arrow
 					// (Arrow is 5.0m, so this adds a 3.0m safety buffer)
@@ -179,8 +166,8 @@ export default class ExtendedPathLayer<DataT = unknown> extends CompositeLayer<E
 					stroked: true,
 					filled: true,
 					pickable: true,
-					radiusUnits: "pixels", // Changed from pixels to meters for zoom scaling
-					lineWidthUnits: "pixels", // Changed from pixels to meters for zoom scaling
+					radiusUnits: "pixels",
+					lineWidthUnits: "pixels",
 				}),
 			);
 		}
