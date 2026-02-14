@@ -4,7 +4,9 @@
       "Bash(bun add:*)",
       "Bash(bun pm:*)",
       "Bash(bun remove:*)",
-      "Bash(bun run:*)"
+      "Bash(bun run:*)",
+      "Bash(bunx biome check:*)",
+      "Bash(bunx biome format:*)"
     ]
   }
 }

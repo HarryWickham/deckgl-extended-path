@@ -13,6 +13,7 @@
     "@deck.gl/core": "9.1.15",
     "@deck.gl/layers": "9.1.15",
     "@deck.gl/mapbox": "9.1.15",
+    "@turf/turf": "^7.3.4",
     "@vis.gl/react-maplibre": "^8.1.0",
     "maplibre-gl": "^5.17.0",
     "react": "^19.2.4",
