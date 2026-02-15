@@ -4,18 +4,36 @@ import { GeoJsonLayer } from "@deck.gl/layers";
 import { interpolate, isobands } from "@turf/turf";
 
 const DEFAULT_COLOR_RANGE: number[][] = [
+	[8, 29, 88],
+	[16, 56, 126],
+	[23, 82, 156],
+	[32, 112, 180],
+	[43, 140, 190],
 	[65, 182, 196],
+	[99, 198, 189],
 	[127, 205, 187],
+	[161, 218, 180],
 	[199, 233, 180],
+	[217, 240, 179],
 	[237, 248, 177],
 	[255, 255, 204],
+	[255, 245, 178],
 	[255, 237, 160],
+	[254, 227, 140],
 	[254, 217, 118],
+	[254, 198, 96],
 	[254, 178, 76],
+	[253, 159, 68],
 	[253, 141, 60],
+	[252, 112, 51],
 	[252, 78, 42],
+	[240, 52, 35],
 	[227, 26, 28],
+	[208, 13, 33],
 	[189, 0, 38],
+	[165, 0, 38],
+	[128, 0, 38],
+	[89, 0, 28],
 ];
 
 export type InterpolatedHeatmapLayerProps<DataT = unknown> = CompositeLayerProps & {
@@ -42,10 +60,10 @@ const defaultProps: DefaultProps<InterpolatedHeatmapLayerProps<any>> = {
 	weight: { type: "number", value: 2 },
 	useContours: { type: "boolean", value: false },
 	contourBands: { type: "array", value: null },
-	numBands: { type: "number", value: 10 },
+	numBands: { type: "number", value: 30 },
 	colorRange: { type: "array", value: DEFAULT_COLOR_RANGE },
 	opacity: { type: "number", value: 0.8 },
-	stroked: { type: "boolean", value: false },
+	stroked: false,
 	lineWidth: { type: "number", value: 1 },
 };
 
@@ -123,6 +141,27 @@ export class InterpolatedHeatmapLayer<DataT = unknown> extends CompositeLayer<In
 				gridData = grid;
 			}
 
+			// Embed fill color and opacity into each feature's properties
+			const colorRange = this.props.colorRange ?? DEFAULT_COLOR_RANGE;
+			for (const feature of gridData.features) {
+				const raw = feature.properties?.value;
+				let value: number;
+				if (typeof raw === "string") {
+					const parts = raw.split("-");
+					const min = Number.parseFloat(parts[0]);
+					const max = Number.parseFloat(parts[parts.length - 1]);
+					value = (min + max) / 2;
+				} else {
+					value = raw as number;
+				}
+				const color = this._getColorHex(value, minValue, maxValue, colorRange);
+				feature.properties = {
+					...feature.properties,
+					fill: color,
+					"fill-opacity": this.props.opacity ?? 0.8,
+				};
+			}
+
 			console.log("InterpolatedHeatmapLayer grid data:", gridData);
 
 			this.setState({ gridData, minValue, maxValue });
@@ -137,11 +176,11 @@ export class InterpolatedHeatmapLayer<DataT = unknown> extends CompositeLayer<In
 		return Array.from({ length: count + 1 }, (_, i) => min + i * step);
 	}
 
-	_getColor(value: number): Color {
-		const colorRange = this.props.colorRange ?? DEFAULT_COLOR_RANGE;
-		const { minValue, maxValue } = this.state as { minValue: number; maxValue: number };
-
-		if (maxValue === minValue) return colorRange[0] as Color;
+	_getColorHex(value: number, minValue: number, maxValue: number, colorRange: number[][]): string {
+		if (maxValue === minValue) {
+			const c = colorRange[0];
+			return `#${c[0].toString(16).padStart(2, "0")}${c[1].toString(16).padStart(2, "0")}${c[2].toString(16).padStart(2, "0")}`;
+		}
 
 		const t = Math.max(0, Math.min(1, (value - minValue) / (maxValue - minValue)));
 		const idx = Math.min(Math.floor(t * (colorRange.length - 1)), colorRange.length - 2);
@@ -149,11 +188,17 @@ export class InterpolatedHeatmapLayer<DataT = unknown> extends CompositeLayer<In
 
 		const c1 = colorRange[idx];
 		const c2 = colorRange[idx + 1];
-		return [
-			Math.round(c1[0] + (c2[0] - c1[0]) * frac),
-			Math.round(c1[1] + (c2[1] - c1[1]) * frac),
-			Math.round(c1[2] + (c2[2] - c1[2]) * frac),
-		] as Color;
+		const r = Math.round(c1[0] + (c2[0] - c1[0]) * frac);
+		const g = Math.round(c1[1] + (c2[1] - c1[1]) * frac);
+		const b = Math.round(c1[2] + (c2[2] - c1[2]) * frac);
+		return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+	}
+
+	_hexToRgba(hex: string, opacity: number): Color {
+		const r = Number.parseInt(hex.slice(1, 3), 16);
+		const g = Number.parseInt(hex.slice(3, 5), 16);
+		const b = Number.parseInt(hex.slice(5, 7), 16);
+		return [r, g, b, Math.round(opacity * 255)] as Color;
 	}
 
 	renderLayers() {
@@ -166,24 +211,18 @@ export class InterpolatedHeatmapLayer<DataT = unknown> extends CompositeLayer<In
 			id: `${this.props.id}-geojson`,
 			data: gridData,
 			getFillColor: (d) => {
-				const raw = d.properties?.value;
-				// isobands returns value as "min-max" string; use midpoint
-				if (typeof raw === "string") {
-					const parts = raw.split("-");
-					const min = parseFloat(parts[0]);
-					const max = parseFloat(parts[parts.length - 1]);
-					return this._getColor((min + max) / 2);
-				}
-				return this._getColor(raw as number);
+				const fill = d.properties?.fill as string;
+				const fillOpacity = (d.properties?.["fill-opacity"] as number) ?? 0.8;
+				return this._hexToRgba(fill, fillOpacity);
 			},
-			opacity,
+			opacity: 1,
 			stroked,
 			getLineColor: [50, 50, 50],
 			getLineWidth: lineWidth,
 			lineWidthUnits: "pixels",
 			pickable: this.props.pickable,
 			updateTriggers: {
-				getFillColor: [this.props.colorRange, this.state?.minValue, this.state?.maxValue],
+				getFillColor: [this.props.colorRange, this.state?.minValue, this.state?.maxValue, opacity],
 			},
 		});
 	}

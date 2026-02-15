@@ -15,6 +15,7 @@
     "@deck.gl/mapbox": "9.1.15",
     "@turf/turf": "^7.3.4",
     "@vis.gl/react-maplibre": "^8.1.0",
+    "d3-contour": "^4.0.2",
     "maplibre-gl": "^5.17.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
